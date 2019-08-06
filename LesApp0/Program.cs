@@ -18,7 +18,5 @@ namespace LesApp0
             // delay
             Console.ReadKey(true);
         }
-
-
     }
 }
