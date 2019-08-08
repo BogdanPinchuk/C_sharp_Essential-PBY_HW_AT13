@@ -151,6 +151,7 @@ namespace LesApp0
             thread.Join();
         }
     }
+
     // Nested classes
 
     /// <summary>
