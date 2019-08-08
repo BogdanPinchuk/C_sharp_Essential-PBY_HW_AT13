@@ -42,9 +42,9 @@ namespace LesApp0
         private static string TestMethod()
         {
             // очікуємо 1 секунду
-            Thread.Sleep(1000);
+            Thread.Sleep(100);
             // виводимо результат
-            return "Свою роботу з успіхом завершив TestMethod";
+            return "\n\tСвою роботу з успіхом завершив TestMethod";
         }
 
     }
