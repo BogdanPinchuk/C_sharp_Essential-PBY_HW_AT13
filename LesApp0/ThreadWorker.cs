@@ -16,7 +16,7 @@ namespace LesApp0
         /// <summary>
         /// Делегат який містить метод для виконання
         /// </summary>
-        private Func<TResult> func = null;
+        private readonly Func<TResult> func = null;
         /// <summary>
         /// Результат виконання метода
         /// </summary>
@@ -54,7 +54,7 @@ namespace LesApp0
         /// Виключення
         /// </summary>
         public Exception Extention { get; private set; }
-        
+
         /// <summary>
         /// Результат
         /// </summary>
@@ -70,24 +70,25 @@ namespace LesApp0
             get
             {
                 // 1.
-                if (IsCompleted == false &&                         // не завершився (бо не почався)
-                    IsSuccess == false)                             // нема успіху
+                if (IsCompleted == false &&                                 // не завершився
+                    this.Extention.Message == new IsNotStarted().Message)   // перевірка чи було почато виконання
                 {
                     throw this.Extention;
                 }
 
                 // 2.
-                if (this.Extention != null &&                       // можлвио потік уже виконався
-                    this.Extention
-                    .Equals(new IsNotComplatedExtention()))         // потік був запущений
+                if (this.Extention != null &&                           // можлвио потік уже виконався
+                    this.Extention.Message ==
+                        new IsNotComplatedExtention().Message)          // потік був запущений
                 {
+                    //Console.WriteLine("Очікування запущене через ThreadWorker");    // для тестування
                     // очікуємо завершення виконання потоку
                     Wait();
                 }
 
                 // 3. перевыряємо статус успішоного виконання
-                if (IsCompleted == true &&                     // завершився
-                    IsSuccess == false)                             // немає успіху
+                if (IsCompleted == true &&                      // завершився
+                    IsSuccess == false)                         // немає успіху
                 {
                     throw this.Extention;
                 }
@@ -104,38 +105,41 @@ namespace LesApp0
         /// </summary>
         public void Start()
         {
-            // необхідно ловити всі помилки які можуть виникнути
-            // при виконанні самого методу і у випадку їх виникнення
-            // ссилатися на IsNotSuccessExtention
-            try
+            // передаємо потоку делегат на виконання через лямда вираз
+            // при цьому в середині задаємо присвоєння даних у разі успішного
+            // виконання методу
+            thread = new Thread(() =>
             {
-                // передаємо потоку делегат на виконання через лямда вираз
-                // при цьому в середині задаємо присвоєння даних у разі успішного
-                // виконання методу
-                thread = new Thread(() => this.result = this.func());
+                // необхідно ловити всі помилки які можуть виникнути
+                // при виконанні самого методу і у випадку їх виникнення
+                // ссилатися на IsNotSuccessExtention
+                try
+                {
+                    this.result = this.func();
 
-                // присвоюємо виключення про те що потік не завершився, але ще виконується
-                this.Extention = new IsNotComplatedExtention();
+                    // якщо операція завершилася успішно, міняємо стан
+                    IsCompleted = true;
+                    IsSuccess = true;
 
-                // Запуск виконання
-                thread.Start();
+                    // очищуємо виключення
+                    this.Extention = null;
+                }
+                catch (Exception)   // відловнювання всіх помилок
+                {
+                    // опреація завершилася, але з помилкою, отже:
+                    IsCompleted = true;
+                    IsSuccess = false;
 
-                // якщо операція завершилася успішно, міняємо стан
-                IsCompleted = true;
-                IsSuccess = true;
+                    // присвоюємо виключення про те що потік завершився але з помилкою
+                    this.Extention = new IsNotSuccessExtention();
+                }
+            });
 
-                // очищуємо виключення
-                this.Extention = null;
-            }
-            catch (Exception)   // відловнювання всіх помилок
-            {
-                // опреація завершилася, але з помилкою, отже:
-                IsCompleted = true;
-                IsSuccess = false;
+            // Запуск виконання
+            thread.Start();
 
-                // присвоюємо виключення про те що потік завершився але з помилкою
-                this.Extention = new IsNotSuccessExtention();
-            }
+            // присвоюємо виключення про те що потік не завершився, але ще виконується
+            this.Extention = new IsNotComplatedExtention();
         }
 
         /// <summary>
@@ -146,36 +150,50 @@ namespace LesApp0
             // ставимо на очікування завершення потоку який виконується
             thread.Join();
         }
+    }
+    // Nested classes
 
-        // Nested classes
+    /// <summary>
+    /// Виклчюення спричинене незавершенням виконання операції
+    /// </summary>
+    class IsNotComplatedExtention : Exception
+    {
+        // повідомлення, яке сигналізує про вид помилки
+        public override string Message
+            => "Ви не можете отримати результат, так як виконання операції ще не завершено!";
 
         /// <summary>
         /// Виклчюення спричинене незавершенням виконання операції
         /// </summary>
-        class IsNotComplatedExtention : Exception
-        {
-            // повідомлення, яке сигналізує про вид помилки
-            public override string Message
-                => "Ви не можете отримати результат, так як виконання операції ще не завершено!";
-        }
+        public IsNotComplatedExtention() { }
+    }
+    /// <summary>
+    /// Виключення спричинене виникненням помилки при виконанні операції
+    /// </summary>
+    class IsNotSuccessExtention : Exception
+    {
+        // повідомлення, яке сигналізує про вид помилки
+        public override string Message
+            => "Ви не можете отримати результат, так як операція завершилась з помилкою!";
+
         /// <summary>
         /// Виключення спричинене виникненням помилки при виконанні операції
         /// </summary>
-        class IsNotSuccessExtention : Exception
-        {
-            // повідомлення, яке сигналізує про вид помилки
-            public override string Message
-                => "Ви не можете отримати результат, так як операція завершилась з помилкою!";
-        }
-        /// <summary>
-        /// Виключення спричинене спробою отримати результат без його попереднього розрахунку
-        /// </summary>
-        class IsNotStarted : Exception
-        {
-            // повідомлення, яке сигналізує про вид помилки
-            public override string Message
-                => "Ви не можете отримати результат, так як виконання операції ще не почалося!";
-        }
-
+        public IsNotSuccessExtention() { }
     }
+    /// <summary>
+    /// Виключення спричинене спробою отримати результат без його попереднього розрахунку
+    /// </summary>
+    class IsNotStarted : Exception
+    {
+        // повідомлення, яке сигналізує про вид помилки
+        public override string Message
+            => "Ви не можете отримати результат, так як виконання операції ще не почалося!";
+
+        /// <summary>
+        ///  Виключення спричинене спробою отримати результат без його попереднього розрахунку
+        /// </summary>
+        public IsNotStarted() { }
+    }
+
 }
