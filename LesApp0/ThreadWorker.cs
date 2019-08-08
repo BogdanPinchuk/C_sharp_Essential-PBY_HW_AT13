@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace LesApp0
 {
     /// <summary>
-    /// Клас-обертка для виконання в іншому потоці: value Method(){...}
+    /// Клас-обгортка для виконання в іншому потоці: value Method(){...}
     /// </summary>
     /// <typeparam name="TResult">Тип значення, яке повертатиметься</typeparam>
     class ThreadWorker<TResult>
@@ -77,7 +77,8 @@ namespace LesApp0
                 }
 
                 // 2.
-                if (this.Extention
+                if (this.Extention != null &&                       // можлвио потік уже виконався
+                    this.Extention
                     .Equals(new IsNotComplatedExtention()))         // потік був запущений
                 {
                     // очікуємо завершення виконання потоку
@@ -135,11 +136,6 @@ namespace LesApp0
                 // присвоюємо виключення про те що потік завершився але з помилкою
                 this.Extention = new IsNotSuccessExtention();
             }
-            finally
-            {
-                // завершення виконання потоку
-                thread.Abort();
-            } 
         }
 
         /// <summary>
